@@ -107,6 +107,18 @@ curl http://localhost:8000/health
 3. Railway automatically detects the `Dockerfile` or `Procfile`.
 4. Add your environment variables in the Railway dashboard.
 
+### Deploying to Vercel
+1. Create a new project on [Vercel](https://vercel.com).
+2. Connect your GitHub repository `RudrakshGupta05/mindease`.
+3. Vercel will automatically detect the Python configuration via `vercel.json`.
+4. In **Environment Variables**, add:
+   - `GROQ_API_KEY` (your Groq API key)
+   - `CLERK_PUBLISHABLE_KEY` (your Clerk publishable key)
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (your Clerk publishable key)
+5. Deploy. Vercel will automatically build and deploy your FastAPI application.
+
+**Important:** Never commit `.env` files or real API keys to Git. Use environment variables in Vercel's dashboard.
+
 ---
 
 ## 📡 API Endpoints

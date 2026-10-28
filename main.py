@@ -17,46 +17,17 @@ app.add_middleware(CORSMiddleware,
     allow_headers=["*"],
 )
 
-from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import RedirectResponse
 
-BASE_DIR = Path(__file__).resolve().parent
+if os.path.exists("ui"):
+    app.mount("/app", StaticFiles(directory="ui", html=True), name="ui")
 
-def _load_html_content() -> str:
-    """Find and return the content of index.html across local, docker, and serverless environments."""
-    search_paths = [
-        BASE_DIR / "index.html",
-        BASE_DIR / "api" / "index.html",
-        BASE_DIR / "ui" / "index.html",
-        BASE_DIR / "public" / "index.html",
-        BASE_DIR.parent / "index.html",
-        BASE_DIR.parent / "ui" / "index.html",
-        BASE_DIR.parent / "public" / "index.html",
-    ]
-    for p in search_paths:
-        if p.is_file():
-            try:
-                return p.read_text(encoding="utf-8")
-            except Exception:
-                pass
-    return "<html><body><h1>MindEase AI</h1><p>Frontend loaded.</p></body></html>"
-
-# Mount static files safely if directory exists
-ui_dir = BASE_DIR / "ui"
-if ui_dir.is_dir():
-    app.mount("/static-ui", StaticFiles(directory=str(ui_dir), html=True), name="static-ui")
-
-@app.get("/", response_class=HTMLResponse)
-@app.get("/app", response_class=HTMLResponse)
-@app.get("/app/", response_class=HTMLResponse)
+@app.get("/")
 def read_root():
-    return HTMLResponse(content=_load_html_content(), status_code=200)
-
-@app.get("/api")
-@app.get("/api/index")
-def api_status():
-    return {"status": "ok", "service": "MindEase AI API"}
+    if os.path.exists("ui/index.html"):
+        return RedirectResponse(url="/app/")
+    return {"message":"Welcome to MindEase AI"}
 
 @app.get("/health")
 def health_check():
@@ -64,12 +35,10 @@ def health_check():
     return {"status": "ok", "service": "MindEase"}
 
 @app.get("/config")
-@app.get("/api/config")
 def get_config():
     pk = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") or os.getenv("CLERK_PUBLISHABLE_KEY") or ""
     return {
-        "clerk_publishable_key": pk.strip(),
-        "status": "ok"
+        "clerk_publishable_key": pk
     }
 
 import storage
@@ -77,7 +46,6 @@ from datetime import datetime
 from models import ChatRequest, CreateConversationRequest
 
 @app.get("/conversations")
-@app.get("/api/conversations")
 def get_user_conversations(user_id: str):
     """Retrieve all conversations for the authenticated user."""
     if not user_id or user_id.startswith("guest"):
@@ -85,7 +53,6 @@ def get_user_conversations(user_id: str):
     return storage.list_conversations(user_id)
 
 @app.get("/conversations/{conv_id}")
-@app.get("/api/conversations/{conv_id}")
 def get_conversation_details(conv_id: str, user_id: str):
     """Retrieve messages for a specific conversation."""
     if not user_id or user_id.startswith("guest"):
@@ -96,7 +63,6 @@ def get_conversation_details(conv_id: str, user_id: str):
     return conv
 
 @app.post("/conversations")
-@app.post("/api/conversations")
 def create_new_conversation(request: CreateConversationRequest):
     """Create a new isolated conversation thread for user."""
     if not request.user_id or request.user_id.startswith("guest"):
@@ -104,7 +70,6 @@ def create_new_conversation(request: CreateConversationRequest):
     return storage.create_conversation(request.user_id, request.title or "New Conversation")
 
 @app.delete("/conversations/{conv_id}")
-@app.delete("/api/conversations/{conv_id}")
 def delete_user_conversation(conv_id: str, user_id: str):
     """Delete a conversation belonging to user."""
     if not user_id or user_id.startswith("guest"):
@@ -115,7 +80,6 @@ def delete_user_conversation(conv_id: str, user_id: str):
     return {"status": "deleted"}
 
 @app.post("/chat")
-@app.post("/api/chat")
 async def chat_with_memory(request: ChatRequest):
     if not request.user_id or request.user_id.startswith("guest"):
         raise HTTPException(status_code=401, detail="Authentication required. Please sign in.")
@@ -135,8 +99,6 @@ async def chat_with_memory(request: ChatRequest):
     response = get_response(conv_id, user_query)
     log_chat(conv_id, user_query, response, is_crisis=False)
     storage.add_message(user_id, conv_id, "ai", response, time_str, is_crisis=False)
-    return {"response": response, "conversation_id": conv_id}
-
     return {"response": response, "conversation_id": conv_id}
 
 if __name__ == "__main__":
