@@ -719,12 +719,31 @@
 
     async function initClerk() {
       let pk = null;
+      let lastError = null;
       try {
-        const cfg = await (await fetch("/config")).json();
-        if (cfg.clerk_publishable_key && cfg.clerk_publishable_key.trim()) pk = cfg.clerk_publishable_key.trim();
-      } catch {}
+        let res = await fetch("/config");
+        if (!res.ok) {
+          res = await fetch("/api/config");
+        }
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.clerk_publishable_key && cfg.clerk_publishable_key.trim()) {
+            pk = cfg.clerk_publishable_key.trim();
+          }
+        } else {
+          lastError = `HTTP ${res.status}: ${res.statusText}`;
+        }
+      } catch (err) {
+        lastError = err.message;
+      }
 
-      const noKey = () => alert("Missing Clerk Publishable Key!\n\nPlease add CLERK_PUBLISHABLE_KEY (or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) in your Vercel Project Dashboard (Settings → Environment Variables) and redeploy, or in your local .env file.");
+      const noKey = () => alert(
+        "Missing Clerk Publishable Key!\n\n" +
+        (lastError ? `Network debug: ${lastError}\n\n` : "") +
+        "Please make sure:\n" +
+        "1. CLERK_PUBLISHABLE_KEY is added under Vercel Settings → Environment Variables (for Production).\n" +
+        "2. You triggered a fresh REDEPLOY in Vercel after saving."
+      );
 
       if (!pk) {
         showGate();

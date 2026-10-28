@@ -26,8 +26,11 @@ BASE_DIR = Path(__file__).resolve().parent
 def _load_html_content() -> str:
     """Find and return the content of index.html across local, docker, and serverless environments."""
     search_paths = [
+        BASE_DIR / "index.html",
+        BASE_DIR / "api" / "index.html",
         BASE_DIR / "ui" / "index.html",
         BASE_DIR / "public" / "index.html",
+        BASE_DIR.parent / "index.html",
         BASE_DIR.parent / "ui" / "index.html",
         BASE_DIR.parent / "public" / "index.html",
     ]
@@ -61,10 +64,12 @@ def health_check():
     return {"status": "ok", "service": "MindEase"}
 
 @app.get("/config")
+@app.get("/api/config")
 def get_config():
     pk = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") or os.getenv("CLERK_PUBLISHABLE_KEY") or ""
     return {
-        "clerk_publishable_key": pk
+        "clerk_publishable_key": pk.strip(),
+        "status": "ok"
     }
 
 import storage
@@ -72,6 +77,7 @@ from datetime import datetime
 from models import ChatRequest, CreateConversationRequest
 
 @app.get("/conversations")
+@app.get("/api/conversations")
 def get_user_conversations(user_id: str):
     """Retrieve all conversations for the authenticated user."""
     if not user_id or user_id.startswith("guest"):
@@ -79,6 +85,7 @@ def get_user_conversations(user_id: str):
     return storage.list_conversations(user_id)
 
 @app.get("/conversations/{conv_id}")
+@app.get("/api/conversations/{conv_id}")
 def get_conversation_details(conv_id: str, user_id: str):
     """Retrieve messages for a specific conversation."""
     if not user_id or user_id.startswith("guest"):
@@ -89,6 +96,7 @@ def get_conversation_details(conv_id: str, user_id: str):
     return conv
 
 @app.post("/conversations")
+@app.post("/api/conversations")
 def create_new_conversation(request: CreateConversationRequest):
     """Create a new isolated conversation thread for user."""
     if not request.user_id or request.user_id.startswith("guest"):
@@ -96,6 +104,7 @@ def create_new_conversation(request: CreateConversationRequest):
     return storage.create_conversation(request.user_id, request.title or "New Conversation")
 
 @app.delete("/conversations/{conv_id}")
+@app.delete("/api/conversations/{conv_id}")
 def delete_user_conversation(conv_id: str, user_id: str):
     """Delete a conversation belonging to user."""
     if not user_id or user_id.startswith("guest"):
@@ -106,6 +115,7 @@ def delete_user_conversation(conv_id: str, user_id: str):
     return {"status": "deleted"}
 
 @app.post("/chat")
+@app.post("/api/chat")
 async def chat_with_memory(request: ChatRequest):
     if not request.user_id or request.user_id.startswith("guest"):
         raise HTTPException(status_code=401, detail="Authentication required. Please sign in.")
