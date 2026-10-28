@@ -17,17 +17,43 @@ app.add_middleware(CORSMiddleware,
     allow_headers=["*"],
 )
 
+from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse
 
-if os.path.exists("ui"):
-    app.mount("/app", StaticFiles(directory="ui", html=True), name="ui")
+BASE_DIR = Path(__file__).resolve().parent
 
-@app.get("/")
+def _load_html_content() -> str:
+    """Find and return the content of index.html across local, docker, and serverless environments."""
+    search_paths = [
+        BASE_DIR / "ui" / "index.html",
+        BASE_DIR / "public" / "index.html",
+        BASE_DIR.parent / "ui" / "index.html",
+        BASE_DIR.parent / "public" / "index.html",
+    ]
+    for p in search_paths:
+        if p.is_file():
+            try:
+                return p.read_text(encoding="utf-8")
+            except Exception:
+                pass
+    return "<html><body><h1>MindEase AI</h1><p>Frontend loaded.</p></body></html>"
+
+# Mount static files safely if directory exists
+ui_dir = BASE_DIR / "ui"
+if ui_dir.is_dir():
+    app.mount("/static-ui", StaticFiles(directory=str(ui_dir), html=True), name="static-ui")
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/app", response_class=HTMLResponse)
+@app.get("/app/", response_class=HTMLResponse)
 def read_root():
-    if os.path.exists("ui/index.html"):
-        return RedirectResponse(url="/app/")
-    return {"message":"Welcome to MindEase AI"}
+    return HTMLResponse(content=_load_html_content(), status_code=200)
+
+@app.get("/api")
+@app.get("/api/index")
+def api_status():
+    return {"status": "ok", "service": "MindEase AI API"}
 
 @app.get("/health")
 def health_check():

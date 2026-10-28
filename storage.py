@@ -31,11 +31,23 @@ def _user_matches(stored_uid: Optional[str], query_uid: Optional[str]) -> bool:
     return normalize_user_id(stored_uid) == normalize_user_id(query_uid)
 
 def _ensure_db():
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR, exist_ok=True)
-    if not os.path.exists(DB_FILE):
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump({}, f)
+    global DATA_DIR, DB_FILE
+    try:
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR, exist_ok=True)
+        if not os.path.exists(DB_FILE):
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+    except (OSError, PermissionError):
+        DATA_DIR = "/tmp/mindease_data"
+        DB_FILE = os.path.join(DATA_DIR, "conversations.json")
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            if not os.path.exists(DB_FILE):
+                with open(DB_FILE, "w", encoding="utf-8") as f:
+                    json.dump({}, f)
+        except Exception:
+            pass
 
 def _read_db() -> Dict[str, Any]:
     _ensure_db()
@@ -46,9 +58,20 @@ def _read_db() -> Dict[str, Any]:
         return {}
 
 def _write_db(data: Dict[str, Any]):
+    global DATA_DIR, DB_FILE
     _ensure_db()
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except (OSError, PermissionError):
+        DATA_DIR = "/tmp/mindease_data"
+        DB_FILE = os.path.join(DATA_DIR, "conversations.json")
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
 
 def list_conversations(user_id: str) -> List[Dict[str, Any]]:
     """Return all conversations belonging to user_id, newest first."""
