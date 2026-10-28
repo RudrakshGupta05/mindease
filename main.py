@@ -5,7 +5,6 @@ from models import ChatRequest
 from chat_engine import get_response
 from crisis import contains_crisis_keywords,SAFETY_MESSAGE
 from logger import log_chat
-from doc_engine import query_documents
 from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 
@@ -102,17 +101,6 @@ async def chat_with_memory(request: ChatRequest):
     storage.add_message(user_id, conv_id, "ai", response, time_str, is_crisis=False)
     return {"response": response, "conversation_id": conv_id}
 
-@app.post("/doc-chat")
-async def chat_with_documents(request: ChatRequest):
-    if not request.user_id or request.user_id.startswith("guest"):
-        raise HTTPException(status_code=401, detail="Authentication required. Please sign in.")
-    user_id = request.user_id
-    conv_id = request.conversation_id or request.session_id or f"conv_{user_id}"
-    time_str = datetime.now().strftime("%I:%M %p")
-
-    storage.add_message(user_id, conv_id, "user", request.query, time_str)
-    response = query_documents(request.query)
-    storage.add_message(user_id, conv_id, "ai", response, time_str)
     return {"response": response, "conversation_id": conv_id}
 
 if __name__ == "__main__":

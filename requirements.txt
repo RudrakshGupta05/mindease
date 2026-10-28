@@ -1,14 +1,7 @@
 fastapi
 uvicorn
-requests
 python-dotenv
 pydantic
-langchain
-langchain-core
 langchain-groq
+langchain-core
 groq
-llama-index
-llama-index-core
-llama-index-llms-groq
-llama-index-embeddings-huggingface
-sentence-transformers
