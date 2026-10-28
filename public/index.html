@@ -724,7 +724,7 @@
         if (cfg.clerk_publishable_key && cfg.clerk_publishable_key.trim()) pk = cfg.clerk_publishable_key.trim();
       } catch {}
 
-      const noKey = () => alert("Please add CLERK_PUBLISHABLE_KEY to .env.");
+      const noKey = () => alert("Missing Clerk Publishable Key!\n\nPlease add CLERK_PUBLISHABLE_KEY (or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) in your Vercel Project Dashboard (Settings → Environment Variables) and redeploy, or in your local .env file.");
 
       if (!pk) {
         showGate();
