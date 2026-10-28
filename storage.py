@@ -6,6 +6,14 @@ from typing import List, Dict, Optional, Any
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_FILE = os.path.join(DATA_DIR, "conversations.json")
 
+# On serverless platforms like Vercel, root filesystem is read-only; fallback to /tmp
+try:
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR, exist_ok=True)
+except (OSError, PermissionError):
+    DATA_DIR = "/tmp/mindease_data"
+    DB_FILE = os.path.join(DATA_DIR, "conversations.json")
+
 def normalize_user_id(uid: Optional[str]) -> str:
     """Normalize user id by removing redundant user_ prefixes so IDs consistently match."""
     if not uid:
